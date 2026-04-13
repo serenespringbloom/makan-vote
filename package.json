@@ -1,0 +1,19 @@
+{
+  "name": "makan-vote",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0"
+  },
+  "devDependencies": {
+    "vite": "^6.4.2"
+  }
+}
