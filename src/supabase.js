@@ -13,6 +13,14 @@ export async function signInWithGoogle() {
   if (error) throw error;
 }
 
+export async function signInAnonymously(displayName) {
+  const { data, error } = await sb.auth.signInAnonymously();
+  if (error) throw error;
+  // Store display name in user metadata
+  await sb.auth.updateUser({ data: { full_name: displayName, is_guest: true } });
+  return data.user;
+}
+
 export async function signOut() {
   const { error } = await sb.auth.signOut();
   if (error) throw error;

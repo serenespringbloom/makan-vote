@@ -36,7 +36,7 @@ onAuthStateChange(async (user) => {
     return;
   }
 
-  // Restore session from localStorage after OAuth redirect
+  // Restore session from localStorage after OAuth redirect or page refresh
   if (!currentSession) {
     const stored = loadSessionLocal();
     if (stored) {
@@ -46,6 +46,12 @@ onAuthStateChange(async (user) => {
         clearSessionLocal();
       }
     }
+  }
+
+  // Anonymous users who haven't joined a session yet go to login
+  if (user.is_anonymous && !currentSession) {
+    navigate('login');
+    return;
   }
 
   navigate(currentSession ? 'vote' : 'login');

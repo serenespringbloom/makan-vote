@@ -22,7 +22,7 @@ export async function renderResults(user, session, onNavigate) {
   cleanupResults();
   _subs.push(subscribeToOptions(session.id, async () => { options = await getOptions(session.id); render(); }));
   _subs.push(subscribeToMembers(session.id, async () => { members = await getMembers(session.id); render(); }));
-  _subs.push(subscribeToVotes(session.id, async () => { allVotes = await getVotes(session.id); render(); }));
+  _subs.push(subscribeToVotes(session.id,   async () => { allVotes = await getVotes(session.id); render(); }));
 
   function render() {
     const voterIds = [...new Set(allVotes.map(v => v.user_id))];
@@ -52,25 +52,25 @@ export async function renderResults(user, session, onNavigate) {
     let resultsHtml = '';
     for (const [meal, areas] of Object.entries(grouped)) {
       const topScore = Math.max(...Object.values(areas).flat().map(o => o.score), 0);
-      resultsHtml += `<div class="meal-section"><h2 class="meal-heading">${meal}</h2>`;
+      resultsHtml += `<div class="q-meal-section"><h2 class="q-meal-heading">${meal}</h2>`;
       for (const [area, opts] of Object.entries(areas)) {
-        resultsHtml += `<div class="area-group"><h3 class="area-heading">${area}</h3><div class="results-list">`;
+        resultsHtml += `<div class="q-area-group"><h3 class="q-area-heading">${area}</h3><div class="q-results-list">`;
         opts.forEach(opt => {
-          const pct = grandTotal > 0 ? ((opt.score / grandTotal) * 100).toFixed(1) : '0.0';
-          const barPct = topScore > 0 ? ((opt.score / topScore) * 100).toFixed(1) : '0';
-          const isTop = opt.score > 0 && opt.score === topScore;
+          const pct    = grandTotal > 0 ? ((opt.score / grandTotal) * 100).toFixed(1) : '0.0';
+          const barPct = topScore > 0   ? ((opt.score / topScore)   * 100).toFixed(1) : '0';
+          const isTop  = opt.score > 0 && opt.score === topScore;
           const breakdown = (voterBreakdown[opt.id] ?? [])
             .sort((a, b) => b.amount - a.amount)
-            .map(v => `<span class="voter-chip">${escHtml(v.name)}: ${v.amount}</span>`)
+            .map(v => `<span class="q-voter-chip">${escHtml(v.name)}: ${v.amount}</span>`)
             .join('');
           resultsHtml += `
-            <div class="result-row ${isTop ? 'top-pick' : ''}">
-              <div class="result-top">
-                <span class="result-name">${isTop ? '👑 ' : ''}${escHtml(opt.name)}</span>
-                <span class="result-score">${opt.score} pts <span class="result-pct">(${pct}%)</span></span>
+            <div class="q-result-row ${isTop ? 'top-pick' : ''}">
+              <div class="q-result-top">
+                <span class="q-result-name">${isTop ? '👑 ' : ''}${escHtml(opt.name)}</span>
+                <span class="q-result-score">${opt.score} pts <span class="q-result-pct">(${pct}%)</span></span>
               </div>
-              <div class="result-bar-wrap"><div class="result-bar" style="width:${barPct}%"></div></div>
-              ${breakdown ? `<div class="voter-breakdown">${breakdown}</div>` : ''}
+              <div class="q-bar-wrap"><div class="q-bar" style="width:${barPct}%"></div></div>
+              ${breakdown ? `<div class="q-voter-breakdown">${breakdown}</div>` : ''}
             </div>`;
         });
         resultsHtml += `</div></div>`;
@@ -79,23 +79,26 @@ export async function renderResults(user, session, onNavigate) {
     }
 
     app.innerHTML = `
-      <div class="results-wrap">
-        <header class="vote-header">
-          <div class="header-left">
-            <h1 class="logo small">🍽️ Makan Vote</h1>
-            <span class="room-code">Room: <strong>${session.code}</strong></span>
-            ${session.locked ? `<span class="locked-tag">🔒 Finalized</span>` : `<span class="live-tag">● Live</span>`}
+      <div class="q-shell">
+        <header class="q-header">
+          <div class="q-header-left">
+            <div class="q-logo">🍽️ Makan Vote</div>
+            <span class="q-room-badge">${session.code}</span>
+            ${session.locked ? `<span class="q-locked-tag">🔒 Finalized</span>` : `<span class="q-live-tag">● Live</span>`}
           </div>
-          <div class="header-right">
-            <button id="back-vote-btn" class="tab-btn">← Voting</button>
-            <button id="signout-results-btn" class="link-btn">Sign out</button>
+          <div class="q-header-right">
+            <button id="back-vote-btn" class="q-tab-btn">← Voting</button>
+            <button id="signout-results-btn" class="q-link-btn">Sign out</button>
           </div>
         </header>
-        <div class="results-meta">
-          <strong>${voterIds.length} / ${members.length}</strong> member${members.length !== 1 ? 's' : ''} voted
-          &nbsp;·&nbsp; ${grandTotal} total capital cast
+
+        <div class="q-content">
+          <div class="q-results-meta">
+            <strong>${voterIds.length} / ${members.length}</strong> member${members.length !== 1 ? 's' : ''} voted
+            · ${grandTotal} total capital cast
+          </div>
+          ${resultsHtml || '<p style="color:var(--text-muted);padding:20px 0">No options yet.</p>'}
         </div>
-        <div class="options-container">${resultsHtml || '<p class="empty">No options yet.</p>'}</div>
       </div>
     `;
 
