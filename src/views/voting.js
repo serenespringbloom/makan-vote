@@ -142,11 +142,12 @@ export async function renderVoting(user, session, onNavigate) {
 
         <!-- ── Mobile top bar ───────────────────────────────────────── -->
         <div class="v-mobile-bar">
-          <div class="v-brand small">🍽️ Makan Vote</div>
-          <div class="v-mobile-bar-right">
+          <button id="sidebar-toggle" class="v-icon-btn">☰</button>
+          <div class="v-mobile-bar-center">
             <span class="v-room-code-sm" id="room-code-sm" title="Click to copy">${session.code}</span>
-            <button id="sidebar-toggle" class="v-icon-btn">☰</button>
+            <span class="v-mobile-capital ${remaining < 0 ? 'over' : remaining === 0 ? 'zero' : ''}" id="mobile-capital">${remaining}<span class="v-mobile-capital-label"> left</span></span>
           </div>
+          <div class="v-brand small">🍽️</div>
         </div>
 
         <!-- ── Mobile drawer ────────────────────────────────────────── -->
@@ -395,6 +396,11 @@ export async function renderVoting(user, session, onNavigate) {
       ringEl.className.baseVal = `v-ring-fill ${remaining < 0 ? 'over' : remaining === 0 ? 'zero' : ''}`;
     }
     if (drawerC) drawerC.textContent = `${remaining} / ${TOTAL_CAPITAL}`;
+    const mobileCapEl = document.getElementById('mobile-capital');
+    if (mobileCapEl) {
+      mobileCapEl.childNodes[0].textContent = remaining;
+      mobileCapEl.className = `v-mobile-capital ${remaining < 0 ? 'over' : remaining === 0 ? 'zero' : ''}`;
+    }
 
     // Update voter status in sidebar (this user)
     const voterIds = [...new Set(allVotes.map(v => v.user_id))];
