@@ -352,8 +352,12 @@ export async function renderVoting(user, session, onNavigate) {
   function bindInputs() {
     document.querySelectorAll('.v-alloc-input').forEach(inp => {
       inp.addEventListener('input', () => {
-        const val = Math.max(0, Math.floor(Number(inp.value) || 0));
+        const prev = draft[inp.dataset.id] ?? 0;
+        const raw = Math.max(0, Math.floor(Number(inp.value) || 0));
+        const otherSpent = Object.entries(draft).reduce((a, [k, v]) => k === inp.dataset.id ? a : a + (parseInt(v) || 0), 0);
+        const val = Math.min(raw, TOTAL_CAPITAL - otherSpent);
         inp.value = val;
+        if (val !== raw) showToast(`Capital limit is ${TOTAL_CAPITAL}`, 'error', 2000);
         draft[inp.dataset.id] = val;
         saveDraft(session.id, user.id, draft);
         updateCapitalUI();
@@ -376,7 +380,10 @@ export async function renderVoting(user, session, onNavigate) {
   function nudge(optId, delta) {
     const inp = document.querySelector(`.v-alloc-input[data-id="${optId}"]`);
     if (!inp) return;
-    const val = Math.max(0, (parseInt(inp.value) || 0) + delta);
+    const otherSpent = Object.entries(draft).reduce((a, [k, v]) => k === optId ? a : a + (parseInt(v) || 0), 0);
+    const raw = Math.max(0, (parseInt(inp.value) || 0) + delta);
+    const val = Math.min(raw, TOTAL_CAPITAL - otherSpent);
+    if (delta > 0 && val !== raw) { showToast(`Capital limit is ${TOTAL_CAPITAL}`, 'error', 2000); return; }
     inp.value = val;
     draft[optId] = val;
     saveDraft(session.id, user.id, draft);
