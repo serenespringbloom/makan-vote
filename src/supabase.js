@@ -58,7 +58,10 @@ export async function getSessionByCode(code) {
     .select('*')
     .eq('code', code.toUpperCase())
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST116') throw new Error('Session not found. Check the room code and try again.');
+    throw error;
+  }
   return data;
 }
 
