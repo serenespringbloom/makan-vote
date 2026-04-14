@@ -8,6 +8,7 @@ import {
 import { TOTAL_CAPITAL } from '../config.js';
 import { escHtml } from './login.js';
 import { showToast } from '../toast.js';
+import { confirm as modalConfirm } from '../modal.js';
 
 let _subs = [];
 
@@ -298,7 +299,7 @@ export async function renderVoting(user, session, onNavigate) {
       btn.addEventListener('click', async () => {
         const oid = btn.dataset.oid;
         const opt = options.find(o => o.id === oid);
-        if (!confirm(`Remove "${opt?.name ?? 'this option'}"?`)) return;
+        if (!await modalConfirm(`Remove <strong>${escHtml(opt?.name ?? 'this option')}</strong>?`, { confirmText: 'Remove' })) return;
         delete draft[oid];
         saveDraft(session.id, user.id, draft);
         try { await removeOption(session.id, oid); showToast('Option removed', 'info'); } catch (e) { showToast('Error: ' + e.message, 'error'); }
@@ -354,7 +355,7 @@ export async function renderVoting(user, session, onNavigate) {
       btn.addEventListener('click', async () => {
         const uid = btn.dataset.uid;
         const m = members.find(x => x.user_id === uid);
-        if (!confirm(`Remove ${m?.display_name ?? 'this person'}?`)) return;
+        if (!await modalConfirm(`Remove <strong>${escHtml(m?.display_name ?? 'this person')}</strong> from the session?`, { confirmText: 'Remove' })) return;
         try { await removeMember(session.id, uid); showToast('Member removed', 'info'); } catch (e) { showToast('Error: ' + e.message, 'error'); }
       });
     });
@@ -425,7 +426,7 @@ export async function renderVoting(user, session, onNavigate) {
   }
 
   async function handleLock() {
-    if (!confirm('Finalize voting? Everyone\'s current capital allocation will be saved and voting will close.')) return;
+    if (!await modalConfirm('Finalize voting? Capital allocations will be saved and voting will close for everyone.', { confirmText: 'Finalize', cancelText: 'Not yet' })) return;
     // Push all drafts — only current user's draft is accessible client-side
     // Each user's draft gets pushed when they're active; on lock we push ours
     try {

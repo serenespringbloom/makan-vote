@@ -2,7 +2,9 @@ import {
   signInWithGoogle, signInAnonymously, signOut,
   createSession, getSessionByCode, joinSession,
   saveSessionLocal, loadRecentSessions, removeSessionLocal,
+  sb,
 } from '../supabase.js';
+import { confirm as modalConfirm } from '../modal.js';
 
 export function renderLogin(user, onNavigate) {
   const app = document.getElementById('app');
@@ -25,9 +27,10 @@ export function renderLogin(user, onNavigate) {
           <div class="q-recent-label">Recent Sessions</div>
           <div class="q-recent-list">
             ${recent.map(s => `
-              <div class="q-recent-card">
+              <div class="q-recent-card" data-sid="${s.sessionId}">
                 <div class="q-recent-info">
                   <span class="q-recent-code">${s.code}</span>
+                  <span class="q-recent-status" id="status-${s.sessionId}"></span>
                 </div>
                 <div class="q-recent-actions">
                   <button class="v-btn v-btn--secondary q-rejoin-btn" data-code="${s.code}" style="width:auto;padding:7px 16px;font-size:13px">Rejoin</button>
@@ -89,11 +92,15 @@ export function renderLogin(user, onNavigate) {
       btn.addEventListener('click', () => handleRejoin(btn.dataset.code, user, onNavigate));
     });
     document.querySelectorAll('.q-forget-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        if (!await modalConfirm('Remove this session from your recent list?', { confirmText: 'Remove', danger: false })) return;
         removeSessionLocal(btn.dataset.id);
-        renderLogin(user, onNavigate); // re-render to update list
+        renderLogin(user, onNavigate);
       });
     });
+
+    // Live session status badges
+    subscribeRecentStatus(loadRecentSessions());
     return;
   }
 
@@ -164,11 +171,49 @@ export function renderLogin(user, onNavigate) {
     btn.addEventListener('click', () => handleRejoin(btn.dataset.code, user, onNavigate));
   });
   document.querySelectorAll('.q-forget-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
+      if (!await modalConfirm('Remove this session from your recent list?', { confirmText: 'Remove', danger: false })) return;
       removeSessionLocal(btn.dataset.id);
       renderLogin(user, onNavigate);
     });
   });
+
+  // Live session status badges
+  if (recent.length > 0) subscribeRecentStatus(recent);
+}
+
+// ── Recent session live status ────────────────────────────────────────────────
+let _recentSubs = [];
+
+function subscribeRecentStatus(recent) {
+  // Unsubscribe previous
+  _recentSubs.forEach(s => s.unsubscribe?.());
+  _recentSubs = [];
+
+  recent.forEach(s => {
+    const badgeEl = document.getElementById(`status-${s.sessionId}`);
+    if (!badgeEl) return;
+
+    // Fetch current status immediately
+    sb.from('sessions').select('locked').eq('id', s.sessionId).single()
+      .then(({ data }) => {
+        if (data) setBadge(badgeEl, data.locked);
+      });
+
+    // Subscribe to updates
+    const sub = sb
+      .channel(`home-session:${s.sessionId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${s.sessionId}` }, payload => {
+        setBadge(badgeEl, payload.new.locked);
+      })
+      .subscribe();
+    _recentSubs.push(sub);
+  });
+}
+
+function setBadge(el, locked) {
+  el.textContent = locked ? '🔒 Finalized' : '● Live';
+  el.className = `q-recent-status ${locked ? 'finalized' : 'live'}`;
 }
 
 // ── Join handlers ─────────────────────────────────────────────────────────────
@@ -199,9 +244,7 @@ async function handleGuestJoin(user, onNavigate) {
   if (!name) { showErr(errEl, 'Enter your name.'); return; }
   setLoading('join-btn', true);
   try {
-    const session = await getSessionByCode(code);
-    if (session.locked) { showErr(errEl, 'This session is locked.'); return; }
-
+    // Sign in first so the sessions RLS policy (authenticated read) allows the lookup
     let authUser = user;
     if (!authUser) {
       authUser = await signInAnonymously(name);
@@ -211,6 +254,9 @@ async function handleGuestJoin(user, onNavigate) {
       await sb.auth.updateUser({ data: { full_name: name } });
       authUser = { ...authUser, user_metadata: { ...authUser.user_metadata, full_name: name } };
     }
+
+    const session = await getSessionByCode(code);
+    if (session.locked) { showErr(errEl, 'This session is locked.'); return; }
 
     await joinSession(session.id, { ...authUser, user_metadata: { full_name: name, is_guest: true } });
     saveSessionLocal(session.id, session.code);

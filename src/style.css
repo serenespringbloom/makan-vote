@@ -97,6 +97,34 @@ body {
 .anim-stagger > *:nth-child(5) { animation-delay: 0.25s; }
 
 /* ═══════════════════════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════════════════════ */
+.mv-modal-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(26,5,51,0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; transition: opacity 0.18s ease;
+}
+.mv-modal-overlay.show { opacity: 1; }
+.mv-modal-box {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 28px 28px 22px;
+  max-width: 360px; width: 100%;
+  transform: scale(0.92); transition: transform 0.18s ease;
+}
+.mv-modal-overlay.show .mv-modal-box { transform: scale(1); }
+.mv-modal-msg {
+  font-size: 15px; line-height: 1.55;
+  color: var(--text); margin-bottom: 22px;
+}
+.mv-modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════════════════════════════ */
 #toast-container {
@@ -212,7 +240,11 @@ body {
   gap: 12px; transition: border-color 0.15s;
 }
 .q-recent-card:hover { border-color: var(--purple); }
+.q-recent-info { display: flex; align-items: center; gap: 10px; }
 .q-recent-code { font-size: 18px; font-weight: 900; letter-spacing: 3px; color: var(--dark); }
+.q-recent-status { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.q-recent-status.live { background: var(--green-dim); color: var(--green); }
+.q-recent-status.finalized { background: var(--gold-dim); color: #92400e; }
 .q-recent-actions { display: flex; align-items: center; gap: 10px; }
 
 /* ═══════════════════════════════════════════════════════════════════
