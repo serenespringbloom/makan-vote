@@ -2,9 +2,10 @@ import {
   signInWithGoogle, signInAnonymously, signOut,
   createSession, getSessionByCode, joinSession,
   saveSessionLocal, loadRecentSessions, removeSessionLocal,
-  sb,
+  deleteSession, removeMember, sb,
 } from '../supabase.js';
 import { confirm as modalConfirm } from '../modal.js';
+import { showToast, friendlyError } from '../toast.js';
 
 export function renderLogin(user, onNavigate) {
   const app = document.getElementById('app');
@@ -34,6 +35,7 @@ export function renderLogin(user, onNavigate) {
                 </div>
                 <div class="q-recent-actions">
                   <button class="v-btn v-btn--secondary q-rejoin-btn" data-code="${s.code}" style="width:auto;padding:7px 16px;font-size:13px">Rejoin</button>
+                  <button class="q-link-btn danger q-delete-session-btn" data-id="${s.sessionId}" data-code="${s.code}" title="Delete session">🗑</button>
                   <button class="q-link-btn danger q-forget-btn" data-id="${s.sessionId}">✕</button>
                 </div>
               </div>
@@ -77,7 +79,7 @@ export function renderLogin(user, onNavigate) {
         saveSessionLocal(session.id, session.code);
         onNavigate('vote', session);
       } catch (e) {
-        showErr(errEl, 'Could not create session: ' + e.message);
+        showErr(errEl, friendlyError(e));
       } finally {
         setLoading('create-btn', false);
       }
@@ -90,6 +92,19 @@ export function renderLogin(user, onNavigate) {
     // Recent session actions
     document.querySelectorAll('.q-rejoin-btn').forEach(btn => {
       btn.addEventListener('click', () => handleRejoin(btn.dataset.code, user, onNavigate));
+    });
+    document.querySelectorAll('.q-delete-session-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!await modalConfirm(`Delete session <strong>${btn.dataset.code}</strong>? This will end the session for all members.`, { confirmText: 'Delete session' })) return;
+        try {
+          await deleteSession(btn.dataset.id);
+          removeSessionLocal(btn.dataset.id);
+          showToast('Session deleted', 'info');
+          renderLogin(user, onNavigate);
+        } catch (e) {
+          showToast('Could not delete: only the session creator can delete it.', 'error');
+        }
+      });
     });
     document.querySelectorAll('.q-forget-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -159,7 +174,7 @@ export function renderLogin(user, onNavigate) {
 
   document.getElementById('google-btn').addEventListener('click', async () => {
     try { await signInWithGoogle(); }
-    catch (e) { showErr(document.getElementById('auth-err'), e.message); }
+    catch (e) { showErr(document.getElementById('auth-err'), friendlyError(e)); }
   });
 
   document.getElementById('join-btn').addEventListener('click', () => handleGuestJoin(user, onNavigate));
@@ -172,7 +187,11 @@ export function renderLogin(user, onNavigate) {
   });
   document.querySelectorAll('.q-forget-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!await modalConfirm('Remove this session from your recent list?', { confirmText: 'Remove', danger: false })) return;
+      if (!await modalConfirm('Leave and remove this session from your list?', { confirmText: 'Leave', danger: false })) return;
+      // Remove self from session DB (best-effort)
+      if (user) {
+        try { await removeMember(btn.dataset.id, user.id); } catch {}
+      }
       removeSessionLocal(btn.dataset.id);
       renderLogin(user, onNavigate);
     });
@@ -230,7 +249,7 @@ async function handleJoin(user, onNavigate) {
     saveSessionLocal(session.id, session.code);
     onNavigate('vote', session);
   } catch (e) {
-    showErr(errEl, 'Could not join: ' + e.message);
+    showErr(errEl, friendlyError(e));
   } finally {
     setLoading('join-btn', false);
   }
@@ -262,7 +281,7 @@ async function handleGuestJoin(user, onNavigate) {
     saveSessionLocal(session.id, session.code);
     onNavigate('vote', session);
   } catch (e) {
-    showErr(errEl, 'Could not join: ' + e.message);
+    showErr(errEl, friendlyError(e));
   } finally {
     setLoading('join-btn', false);
   }
@@ -282,7 +301,7 @@ async function handleRejoin(code, user, onNavigate) {
     saveSessionLocal(session.id, session.code);
     onNavigate('vote', session);
   } catch (e) {
-    alert('Could not rejoin: ' + e.message);
+    showToast(friendlyError(e), 'error');
   }
 }
 

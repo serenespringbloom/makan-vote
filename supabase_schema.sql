@@ -66,6 +66,10 @@ create policy "sessions: creator can lock"
   using (auth.uid() = creator_id)
   with check (auth.uid() = creator_id);
 
+create policy "sessions: creator can delete"
+  on sessions for delete to authenticated
+  using (auth.uid() = creator_id);
+
 -- Members: session members can read; authenticated users can join (insert themselves)
 create policy "members: authenticated read"
   on members for select to authenticated using (true);

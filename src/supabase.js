@@ -70,10 +70,16 @@ export async function lockSession(sessionId) {
   if (error) throw error;
 }
 
+export async function deleteSession(sessionId) {
+  const { error } = await sb.from('sessions').delete().eq('id', sessionId);
+  if (error) throw error;
+}
+
 export function subscribeToSession(sessionId, callback) {
   return sb
     .channel(`session:${sessionId}`)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` }, callback)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` }, payload => callback({ ...payload, eventType: 'UPDATE' }))
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` }, payload => callback({ ...payload, eventType: 'DELETE' }))
     .subscribe();
 }
 

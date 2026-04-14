@@ -482,8 +482,8 @@ body {
 ═══════════════════════════════════════════════════════════════════ */
 .q-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .q-header {
-  background: var(--dark); color: #fff; padding: 0 24px; height: 58px;
-  display: flex; align-items: center; justify-content: space-between;
+  background: var(--dark); color: #fff; padding: 0 16px; min-height: 58px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
   gap: 16px; position: sticky; top: 0; z-index: 20;
   box-shadow: 0 2px 16px rgba(0,0,0,0.30);
 }
@@ -566,6 +566,11 @@ body {
   .q-cards { grid-template-columns: 1fr; }
   .q-result-top { flex-wrap: wrap; }
   .q-content { padding: 16px 16px 40px; }
+  .q-header { padding: 8px 12px; height: auto; }
+  .q-header-left { flex-wrap: wrap; gap: 8px; }
+  .q-header-right { gap: 6px; }
+  .q-tab-btn { padding: 5px 12px; font-size: 12px; }
+  .q-header .q-logo { font-size: 17px; }
   .v-add-row { flex-direction: column; }
   .v-add-select, .v-add-row .q-input, .v-add-row .v-btn--add { width: 100%; }
   #toast-container { bottom: 16px; right: 16px; left: 16px; }

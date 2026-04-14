@@ -7,7 +7,7 @@ import {
 } from '../supabase.js';
 import { TOTAL_CAPITAL } from '../config.js';
 import { escHtml } from './login.js';
-import { showToast } from '../toast.js';
+import { showToast, friendlyError } from '../toast.js';
 import { confirm as modalConfirm } from '../modal.js';
 
 let _subs = [];
@@ -56,6 +56,11 @@ export async function renderVoting(user, session, onNavigate) {
 
   _subs.push(subscribeToMembers(session.id, async () => {
     members = await getMembers(session.id);
+    // If current user was kicked, redirect home
+    if (!members.some(m => m.user_id === user.id)) {
+      onNavigate('home');
+      return;
+    }
     patchSidebar();
   }, ':vote'));
 
@@ -65,6 +70,7 @@ export async function renderVoting(user, session, onNavigate) {
   }, ':vote'));
 
   _subs.push(subscribeToSession(session.id, async (payload) => {
+    if (payload.eventType === 'DELETE') { onNavigate('home'); return; }
     if (payload.new?.locked) { session.locked = true; onNavigate('results', session); }
   }));
 
@@ -303,7 +309,7 @@ export async function renderVoting(user, session, onNavigate) {
         if (!await modalConfirm(`Remove <strong>${escHtml(opt?.name ?? 'this option')}</strong>?`, { confirmText: 'Remove' })) return;
         delete draft[oid];
         saveDraft(session.id, user.id, draft);
-        try { await removeOption(session.id, oid); showToast('Option removed', 'info'); } catch (e) { showToast('Error: ' + e.message, 'error'); }
+        try { await removeOption(session.id, oid); showToast('Option removed', 'info'); } catch (e) { showToast(friendlyError(e), 'error'); }
       });
     });
 
@@ -357,7 +363,7 @@ export async function renderVoting(user, session, onNavigate) {
         const uid = btn.dataset.uid;
         const m = members.find(x => x.user_id === uid);
         if (!await modalConfirm(`Remove <strong>${escHtml(m?.display_name ?? 'this person')}</strong> from the session?`, { confirmText: 'Remove' })) return;
-        try { await removeMember(session.id, uid); showToast('Member removed', 'info'); } catch (e) { showToast('Error: ' + e.message, 'error'); }
+        try { await removeMember(session.id, uid); showToast('Member removed', 'info'); } catch (e) { showToast(friendlyError(e), 'error'); }
       });
     });
   }
@@ -425,7 +431,7 @@ export async function renderVoting(user, session, onNavigate) {
       if (document.getElementById('add-name')) document.getElementById('add-name').value = '';
       if (errEl) errEl.classList.add('hidden');
     } catch (e) {
-      showErr(errEl, 'Error: ' + e.message);
+      showErr(errEl, friendlyError(e));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -438,7 +444,7 @@ export async function renderVoting(user, session, onNavigate) {
     try {
       await pushDraftToSupabase();
       await lockSession(session.id);
-    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    } catch (e) { showToast(friendlyError(e), 'error'); }
   }
 
   async function pushDraftToSupabase() {
