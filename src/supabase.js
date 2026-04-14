@@ -102,9 +102,9 @@ export async function removeMember(sessionId, userId) {
   if (error) throw error;
 }
 
-export function subscribeToMembers(sessionId, callback) {
+export function subscribeToMembers(sessionId, callback, suffix = '') {
   return sb
-    .channel(`members:${sessionId}`)
+    .channel(`members:${sessionId}${suffix}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'members', filter: `session_id=eq.${sessionId}` }, callback)
     .subscribe();
 }
@@ -131,9 +131,9 @@ export async function removeOption(sessionId, optionId) {
   if (error) throw error;
 }
 
-export function subscribeToOptions(sessionId, callback) {
+export function subscribeToOptions(sessionId, callback, suffix = '') {
   return sb
-    .channel(`options:${sessionId}`)
+    .channel(`options:${sessionId}${suffix}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'options', filter: `session_id=eq.${sessionId}` }, callback)
     .subscribe();
 }
@@ -156,22 +156,34 @@ export async function getVotes(sessionId) {
   return data;
 }
 
-export function subscribeToVotes(sessionId, callback) {
+export function subscribeToVotes(sessionId, callback, suffix = '') {
   return sb
-    .channel(`votes:${sessionId}`)
+    .channel(`votes:${sessionId}${suffix}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'votes', filter: `session_id=eq.${sessionId}` }, callback)
     .subscribe();
 }
 
-// ── LocalStorage ──────────────────────────────────────────────────────────────
-const LS_KEY = 'makan_vote_session';
+// ── LocalStorage — recent sessions list ───────────────────────────────────────
+const LS_KEY = 'makan_vote_sessions';
 
 export function saveSessionLocal(sessionId, code) {
-  localStorage.setItem(LS_KEY, JSON.stringify({ sessionId, code }));
+  const sessions = loadRecentSessions().filter(s => s.sessionId !== sessionId);
+  sessions.unshift({ sessionId, code, joinedAt: Date.now() });
+  localStorage.setItem(LS_KEY, JSON.stringify(sessions.slice(0, 5))); // keep last 5
 }
 
 export function loadSessionLocal() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch { return null; }
+  const sessions = loadRecentSessions();
+  return sessions[0] ?? null; // most recent
+}
+
+export function loadRecentSessions() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; }
+}
+
+export function removeSessionLocal(sessionId) {
+  const sessions = loadRecentSessions().filter(s => s.sessionId !== sessionId);
+  localStorage.setItem(LS_KEY, JSON.stringify(sessions));
 }
 
 export function clearSessionLocal() {

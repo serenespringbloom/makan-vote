@@ -20,9 +20,9 @@ export async function renderResults(user, session, onNavigate) {
   render();
 
   cleanupResults();
-  _subs.push(subscribeToOptions(session.id, async () => { options = await getOptions(session.id); render(); }));
-  _subs.push(subscribeToMembers(session.id, async () => { members = await getMembers(session.id); render(); }));
-  _subs.push(subscribeToVotes(session.id,   async () => { allVotes = await getVotes(session.id); render(); }));
+  _subs.push(subscribeToOptions(session.id, async () => { options = await getOptions(session.id); render(); }, ':results'));
+  _subs.push(subscribeToMembers(session.id, async () => { members = await getMembers(session.id); render(); }, ':results'));
+  _subs.push(subscribeToVotes(session.id,   async () => { allVotes = await getVotes(session.id); render(); }, ':results'));
 
   function render() {
     const voterIds = [...new Set(allVotes.map(v => v.user_id))];
@@ -88,6 +88,7 @@ export async function renderResults(user, session, onNavigate) {
           </div>
           <div class="q-header-right">
             <button id="back-vote-btn" class="q-tab-btn">← Voting</button>
+            <button id="leave-results-btn" class="q-tab-btn">🏠 Home</button>
             <button id="signout-results-btn" class="q-link-btn">Sign out</button>
           </div>
         </header>
@@ -103,6 +104,7 @@ export async function renderResults(user, session, onNavigate) {
     `;
 
     document.getElementById('back-vote-btn')?.addEventListener('click', () => onNavigate('vote', session));
+    document.getElementById('leave-results-btn')?.addEventListener('click', () => onNavigate('home'));
     document.getElementById('signout-results-btn')?.addEventListener('click', () => { clearSessionLocal(); signOut(); });
   }
 }

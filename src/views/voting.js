@@ -7,6 +7,7 @@ import {
 } from '../supabase.js';
 import { TOTAL_CAPITAL } from '../config.js';
 import { escHtml } from './login.js';
+import { showToast } from '../toast.js';
 
 let _subs = [];
 
@@ -49,18 +50,18 @@ export async function renderVoting(user, session, onNavigate) {
 
   _subs.push(subscribeToOptions(session.id, async () => {
     options = await getOptions(session.id);
-    fullRender(); // options change requires full re-render (list structure changed)
-  }));
+    fullRender();
+  }, ':vote'));
 
   _subs.push(subscribeToMembers(session.id, async () => {
     members = await getMembers(session.id);
     patchSidebar();
-  }));
+  }, ':vote'));
 
   _subs.push(subscribeToVotes(session.id, async () => {
     allVotes = await getVotes(session.id);
-    patchSidebar(); // only member vote-status dots change
-  }));
+    patchSidebar();
+  }, ':vote'));
 
   _subs.push(subscribeToSession(session.id, async (payload) => {
     if (payload.new?.locked) { session.locked = true; onNavigate('results', session); }
@@ -131,6 +132,7 @@ export async function renderVoting(user, session, onNavigate) {
               <button id="results-btn" class="v-btn v-btn--ghost">📊 Results</button>
               ${isCreator && !session.locked ? `<button id="lock-btn" class="v-btn v-btn--danger">🔒 Finalize</button>` : ''}
               ${session.locked ? `<div class="v-locked-badge">🔒 Finalized</div>` : ''}
+              <button id="leave-btn" class="v-btn v-btn--link">← Leave room</button>
               <button id="signout-btn" class="v-btn v-btn--link">Sign out</button>
             </div>
 
@@ -163,6 +165,7 @@ export async function renderVoting(user, session, onNavigate) {
             <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
               <button id="drawer-results-btn" class="v-btn v-btn--ghost">📊 Results</button>
               ${isCreator && !session.locked ? `<button id="drawer-lock-btn" class="v-btn v-btn--danger">🔒 Finalize</button>` : ''}
+              <button id="drawer-leave-btn" class="v-btn v-btn--link">← Leave room</button>
               <button id="drawer-signout-btn" class="v-btn v-btn--link">Sign out</button>
             </div>
           </div>
@@ -268,6 +271,7 @@ export async function renderVoting(user, session, onNavigate) {
     ['room-code-display', 'room-code-sm'].forEach(id => {
       document.getElementById(id)?.addEventListener('click', () => {
         navigator.clipboard.writeText(session.code).then(() => {
+          showToast('Room code copied!', 'success', 2000);
           const hint = document.getElementById('copy-hint');
           if (hint) { hint.textContent = 'Copied!'; setTimeout(() => { hint.textContent = 'Click to copy'; }, 2000); }
         });
@@ -297,13 +301,14 @@ export async function renderVoting(user, session, onNavigate) {
         if (!confirm(`Remove "${opt?.name ?? 'this option'}"?`)) return;
         delete draft[oid];
         saveDraft(session.id, user.id, draft);
-        try { await removeOption(session.id, oid); } catch (e) { alert('Error: ' + e.message); }
+        try { await removeOption(session.id, oid); showToast('Option removed', 'info'); } catch (e) { showToast('Error: ' + e.message, 'error'); }
       });
     });
 
     // Sidebar actions
     document.getElementById('results-btn')?.addEventListener('click', () => onNavigate('results', session));
     document.getElementById('lock-btn')?.addEventListener('click', handleLock);
+    document.getElementById('leave-btn')?.addEventListener('click', () => onNavigate('home'));
     document.getElementById('signout-btn')?.addEventListener('click', () => { clearSessionLocal(); signOut(); });
 
     // Mobile drawer
@@ -312,6 +317,7 @@ export async function renderVoting(user, session, onNavigate) {
     document.getElementById('drawer-close')?.addEventListener('click', closeDrawer);
     document.getElementById('drawer-results-btn')?.addEventListener('click', () => { closeDrawer(); onNavigate('results', session); });
     document.getElementById('drawer-lock-btn')?.addEventListener('click', () => { closeDrawer(); handleLock(); });
+    document.getElementById('drawer-leave-btn')?.addEventListener('click', () => { closeDrawer(); onNavigate('home'); });
     document.getElementById('drawer-signout-btn')?.addEventListener('click', () => { clearSessionLocal(); signOut(); });
 
     // Members remove
@@ -324,7 +330,9 @@ export async function renderVoting(user, session, onNavigate) {
     _pushTimer = setTimeout(() => {
       const allocations = Object.entries(draft)
         .map(([option_id, amount]) => ({ option_id, amount: parseInt(amount) || 0 }));
-      submitVotes(session.id, user.id, allocations).catch(() => {});
+      submitVotes(session.id, user.id, allocations)
+        .then(() => showToast('Votes saved', 'success', 1800))
+        .catch(() => {});
     }, 800);
   }
 
@@ -347,7 +355,7 @@ export async function renderVoting(user, session, onNavigate) {
         const uid = btn.dataset.uid;
         const m = members.find(x => x.user_id === uid);
         if (!confirm(`Remove ${m?.display_name ?? 'this person'}?`)) return;
-        try { await removeMember(session.id, uid); } catch (e) { alert('Error: ' + e.message); }
+        try { await removeMember(session.id, uid); showToast('Member removed', 'info'); } catch (e) { showToast('Error: ' + e.message, 'error'); }
       });
     });
   }
@@ -405,6 +413,7 @@ export async function renderVoting(user, session, onNavigate) {
     if (btn) btn.disabled = true;
     try {
       await addOption(session.id, meal, area, name);
+      showToast('Option added!', 'success');
       if (document.getElementById('add-area')) document.getElementById('add-area').value = '';
       if (document.getElementById('add-name')) document.getElementById('add-name').value = '';
       if (errEl) errEl.classList.add('hidden');
@@ -422,7 +431,7 @@ export async function renderVoting(user, session, onNavigate) {
     try {
       await pushDraftToSupabase();
       await lockSession(session.id);
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
   }
 
   async function pushDraftToSupabase() {

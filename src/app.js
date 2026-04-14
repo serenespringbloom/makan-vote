@@ -8,6 +8,15 @@ let currentUser = null;
 let currentSession = null;
 
 function navigate(view, session) {
+  if (view === 'home') {
+    // Leave room — go back to home without clearing session history
+    cleanupVoting();
+    cleanupResults();
+    currentSession = null;
+    renderLogin(currentUser, navigate);
+    return;
+  }
+
   if (session) currentSession = session;
 
   if (view !== 'vote') cleanupVoting();
@@ -36,14 +45,16 @@ onAuthStateChange(async (user) => {
     return;
   }
 
-  // Restore session from localStorage after OAuth redirect or page refresh
+  // Restore most recent session from localStorage after OAuth redirect or page refresh
+  // But only if we're not already in a session (e.g. user navigated home intentionally)
   if (!currentSession) {
     const stored = loadSessionLocal();
     if (stored) {
       try {
         currentSession = await getSessionByCode(stored.code);
       } catch {
-        clearSessionLocal();
+        // Session gone — leave it in the list, user can manually remove
+        currentSession = null;
       }
     }
   }
