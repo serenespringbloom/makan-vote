@@ -54,9 +54,14 @@ export async function renderVoting(user, session, onNavigate) {
     fullRender();
   }, ':vote'));
 
-  _subs.push(subscribeToMembers(session.id, async () => {
+  _subs.push(subscribeToMembers(session.id, async (payload) => {
+    // Fast-path: detect own kick directly from DELETE payload
+    if (payload.eventType === 'DELETE' && payload.old?.user_id === user.id) {
+      onNavigate('home');
+      return;
+    }
     members = await getMembers(session.id);
-    // If current user was kicked, redirect home
+    // Fallback check in case payload.old is empty
     if (!members.some(m => m.user_id === user.id)) {
       onNavigate('home');
       return;

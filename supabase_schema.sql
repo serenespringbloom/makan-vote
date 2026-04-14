@@ -129,3 +129,7 @@ alter publication supabase_realtime add table sessions;
 alter publication supabase_realtime add table members;
 alter publication supabase_realtime add table options;
 alter publication supabase_realtime add table votes;
+
+-- Required for DELETE events to carry row data (for kick detection)
+alter table members replica identity full;
+alter table sessions replica identity full;

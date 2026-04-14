@@ -36,7 +36,6 @@ export function renderLogin(user, onNavigate) {
                 <div class="q-recent-actions">
                   <button class="v-btn v-btn--secondary q-rejoin-btn" data-code="${s.code}" style="width:auto;padding:7px 16px;font-size:13px">Rejoin</button>
                   <button class="q-link-btn danger q-delete-session-btn" data-id="${s.sessionId}" data-code="${s.code}" title="Delete session">🗑</button>
-                  <button class="q-link-btn danger q-forget-btn" data-id="${s.sessionId}">✕</button>
                 </div>
               </div>
             `).join('')}
@@ -213,17 +212,28 @@ function subscribeRecentStatus(recent) {
     const badgeEl = document.getElementById(`status-${s.sessionId}`);
     if (!badgeEl) return;
 
-    // Fetch current status immediately
+    // Fetch current status immediately; if 404/gone, remove from local list
     sb.from('sessions').select('locked').eq('id', s.sessionId).single()
-      .then(({ data }) => {
-        if (data) setBadge(badgeEl, data.locked);
+      .then(({ data, error }) => {
+        if (!data || error) {
+          removeSessionLocal(s.sessionId);
+          document.querySelector(`.q-recent-card[data-sid="${s.sessionId}"]`)?.remove();
+          return;
+        }
+        setBadge(badgeEl, data.locked);
       });
 
-    // Subscribe to updates
+    // Subscribe to updates and deletes
     const sub = sb
       .channel(`home-session:${s.sessionId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${s.sessionId}` }, payload => {
         setBadge(badgeEl, payload.new.locked);
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sessions' }, payload => {
+        if (payload.old?.id === s.sessionId || !payload.old?.id) {
+          removeSessionLocal(s.sessionId);
+          document.querySelector(`.q-recent-card[data-sid="${s.sessionId}"]`)?.remove();
+        }
       })
       .subscribe();
     _recentSubs.push(sub);

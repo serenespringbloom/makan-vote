@@ -113,7 +113,9 @@ export async function removeMember(sessionId, userId) {
 export function subscribeToMembers(sessionId, callback, suffix = '') {
   return sb
     .channel(`members:${sessionId}${suffix}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'members', filter: `session_id=eq.${sessionId}` }, callback)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'members', filter: `session_id=eq.${sessionId}` }, callback)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'members', filter: `session_id=eq.${sessionId}` }, callback)
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'members' }, callback)
     .subscribe();
 }
 
