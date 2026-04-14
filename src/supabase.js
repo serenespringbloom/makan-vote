@@ -48,13 +48,7 @@ export async function createSession(user) {
     .single();
   if (error) throw error;
 
-  // Join first so the member row exists before the options RLS check
   await joinSession(data.id, user);
-
-  const options = SEED_OPTIONS.map(o => ({ session_id: data.id, meal: o.meal, area: o.area, name: o.name }));
-  const { error: optErr } = await sb.from('options').insert(options);
-  if (optErr) throw optErr;
-
   return data;
 }
 

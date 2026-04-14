@@ -52,7 +52,7 @@ export async function renderResults(user, session, onNavigate) {
     let resultsHtml = '';
     for (const [meal, areas] of Object.entries(grouped)) {
       const topScore = Math.max(...Object.values(areas).flat().map(o => o.score), 0);
-      resultsHtml += `<div class="q-meal-section"><h2 class="q-meal-heading">${meal}</h2>`;
+      resultsHtml += `<div class="q-meal-section"><h2 class="q-meal-heading"><span class="v-meal-pill">${meal}</span></h2>`;
       for (const [area, opts] of Object.entries(areas)) {
         resultsHtml += `<div class="q-area-group"><h3 class="q-area-heading">${area}</h3><div class="q-results-list">`;
         opts.forEach(opt => {
