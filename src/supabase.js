@@ -79,27 +79,13 @@ export function subscribeToSession(sessionId, callback) {
 export async function joinSession(sessionId, user) {
   const display_name = user.user_metadata?.full_name ?? user.email ?? 'Guest';
 
-  // Try insert; if already a member (unique conflict) that's fine — just fetch existing row
+  // Try insert; if already a member (unique conflict) that's fine
   const { error: insertErr } = await sb
     .from('members')
-    .insert({ session_id: sessionId, user_id: user.id, display_name })
-    .select()
-    .single();
+    .insert({ session_id: sessionId, user_id: user.id, display_name });
 
-  if (insertErr) {
-    // 23505 = unique_violation (already a member) — not an error for us
-    if (insertErr.code !== '23505') throw insertErr;
-  }
-
-  // Return the member row (existing or newly inserted)
-  const { data, error } = await sb
-    .from('members')
-    .select()
-    .eq('session_id', sessionId)
-    .eq('user_id', user.id)
-    .single();
-  if (error) throw error;
-  return data;
+  if (insertErr && insertErr.code !== '23505') throw insertErr;
+  // 23505 = unique_violation (already a member) — not an error for us
 }
 
 export async function getMembers(sessionId) {
