@@ -49,7 +49,12 @@ export async function renderResults(user, session, onNavigate) {
       voterBreakdown[v.option_id].push({ name: voterNameMap[v.user_id] ?? 'Unknown', amount: v.amount });
     });
 
-    let resultsHtml = '';
+    // Global pie — all options with votes
+    const allScoredOpts = Object.values(grouped).flatMap(areas => Object.values(areas).flat()).filter(o => o.score > 0);
+    const globalPie = allScoredOpts.length > 0 && grandTotal > 0
+      ? `<div class="q-pie-wrap">${buildPie(allScoredOpts, grandTotal)}</div>` : '';
+
+    let resultsHtml = globalPie;
     for (const [meal, areas] of Object.entries(grouped)) {
       const topScore = Math.max(...Object.values(areas).flat().map(o => o.score), 0);
       resultsHtml += `<div class="q-meal-section"><h2 class="q-meal-heading"><span class="v-meal-pill">${meal}</span></h2>`;
@@ -107,6 +112,48 @@ export async function renderResults(user, session, onNavigate) {
     document.getElementById('leave-results-btn')?.addEventListener('click', () => onNavigate('home'));
     document.getElementById('signout-results-btn')?.addEventListener('click', () => { clearSessionLocal(); signOut(); });
   }
+}
+
+// Palette cycles through purple/magenta/teal/gold/green/red shades
+const PIE_COLORS = [
+  '#7c3aed','#ff319f','#0891b2','#f59e0b','#059669','#e11d48',
+  '#a855f7','#ec4899','#06b6d4','#d97706','#10b981','#f43f5e',
+  '#6d28d9','#db2777','#0e7490','#b45309','#047857','#be123c',
+];
+
+function buildPie(opts, total) {
+  const cx = 100, cy = 100, r = 80;
+  const labelR = 108; // radius for legend dots
+  let segments = '';
+  let angle = -Math.PI / 2; // start at top
+
+  opts.forEach((opt, i) => {
+    const slice = (opt.score / total) * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(angle);
+    const y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(angle + slice);
+    const y2 = cy + r * Math.sin(angle + slice);
+    const large = slice > Math.PI ? 1 : 0;
+    const color = PIE_COLORS[i % PIE_COLORS.length];
+    segments += `<path class="q-pie-slice" d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${color}" data-label="${escHtml(opt.name)}" />`;
+    angle += slice;
+  });
+
+  // Legend
+  const legend = opts.map((opt, i) => {
+    const pct = ((opt.score / total) * 100).toFixed(1);
+    const color = PIE_COLORS[i % PIE_COLORS.length];
+    return `<div class="q-pie-legend-item"><span class="q-pie-dot" style="background:${color}"></span><span class="q-pie-legend-name">${escHtml(opt.name)}</span><span class="q-pie-legend-pct">${pct}%</span></div>`;
+  }).join('');
+
+  return `
+    <div class="q-pie-chart">
+      <svg class="q-pie-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        ${segments}
+        <circle cx="${cx}" cy="${cy}" r="40" fill="white"/>
+      </svg>
+      <div class="q-pie-legend">${legend}</div>
+    </div>`;
 }
 
 export function cleanupResults() {

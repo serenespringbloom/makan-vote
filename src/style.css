@@ -506,6 +506,30 @@ body {
 .q-header .q-link-btn:hover { color: #fff; }
 
 .q-content { max-width: 760px; width: 100%; margin: 0 auto; padding: 28px 24px 60px; }
+/* ── Pie chart ────────────────────────────────────────────────────── */
+.q-pie-wrap {
+  margin-bottom: 28px;
+}
+.q-pie-chart {
+  display: flex; align-items: center; gap: 28px;
+  background: var(--surface); border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border); padding: 20px 24px;
+  box-shadow: var(--shadow-sm);
+}
+.q-pie-svg {
+  width: 160px; height: 160px; flex-shrink: 0;
+}
+.q-pie-slice {
+  transition: opacity 0.15s;
+  stroke: #fff; stroke-width: 1.5;
+}
+.q-pie-slice:hover { opacity: 0.82; }
+.q-pie-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
+.q-pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.q-pie-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.q-pie-legend-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
+.q-pie-legend-pct { color: var(--text-muted); font-weight: 700; font-size: 12px; flex-shrink: 0; }
+
 .q-results-meta {
   font-size: 13px; color: var(--text-muted); font-weight: 600;
   padding: 12px 0; border-bottom: 2px solid var(--border); margin-bottom: 20px;
@@ -566,6 +590,8 @@ body {
   .q-cards { grid-template-columns: 1fr; }
   .q-result-top { flex-wrap: wrap; }
   .q-content { padding: 16px 16px 40px; }
+  .q-pie-chart { flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px; }
+  .q-pie-svg { width: 140px; height: 140px; align-self: center; }
   .q-header { padding: 8px 12px; height: auto; }
   .q-header-left { flex-wrap: wrap; gap: 8px; }
   .q-header-right { gap: 6px; }
